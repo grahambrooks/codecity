@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeCity - Git Repository Visualization</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+      background: #1a1a2e;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    #ui-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 320px;
+      background: rgba(26, 26, 46, 0.95);
+      border: 1px solid #3a3a5e;
+      border-radius: 12px;
+      padding: 20px;
+      color: #e0e0e0;
+      z-index: 100;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    #ui-panel h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #ui-panel h1::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: #4ecdc4;
+      border-radius: 2px;
+    }
+
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+      margin-bottom: 6px;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 10px 12px;
+      background: #2a2a4e;
+      border: 1px solid #3a3a5e;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #4ecdc4;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4ecdc4, #44a08d);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+    }
+
+    .btn-secondary {
+      background: #3a3a5e;
+      color: #e0e0e0;
+    }
+
+    .btn-secondary:hover {
+      background: #4a4a6e;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .divider {
+      height: 1px;
+      background: #3a3a5e;
+      margin: 20px 0;
+    }
+
+    .view-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .view-toggle button {
+      flex: 1;
+      padding: 8px;
+      background: #2a2a4e;
+      border: 1px solid #3a3a5e;
+      border-radius: 6px;
+      color: #888;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-toggle button.active {
+      background: #4ecdc4;
+      border-color: #4ecdc4;
+      color: #1a1a2e;
+    }
+
+    #repo-list {
+      margin-top: 16px;
+    }
+
+    .repo-item {
+      padding: 12px;
+      background: #2a2a4e;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .repo-item:hover {
+      background: #3a3a5e;
+    }
+
+    .repo-item.selected {
+      border: 1px solid #4ecdc4;
+    }
+
+    .repo-item-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .repo-item-stats {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .language-bar {
+      height: 4px;
+      border-radius: 2px;
+      margin-top: 8px;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .language-segment {
+      height: 100%;
+    }
+
+    #legend {
+      margin-top: 16px;
+    }
+
+    #legend h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #888;
+      margin-bottom: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .legend-color {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+
+    #tooltip {
+      position: fixed;
+      background: rgba(26, 26, 46, 0.95);
+      border: 1px solid #3a3a5e;
+      border-radius: 8px;
+      padding: 12px;
+      color: #e0e0e0;
+      font-size: 13px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 1000;
+      max-width: 280px;
+    }
+
+    #tooltip.visible {
+      opacity: 1;
+    }
+
+    #tooltip h4 {
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    #tooltip .stat {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    #tooltip .stat-label {
+      color: #888;
+    }
+
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #4ecdc4;
+      font-size: 18px;
+      display: none;
+    }
+
+    #loading.visible {
+      display: block;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #3a3a5e;
+      border-top-color: #4ecdc4;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #breadcrumb {
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    #breadcrumb.visible {
+      display: block;
+    }
+
+    #breadcrumb span {
+      cursor: pointer;
+      color: #4ecdc4;
+    }
+
+    #breadcrumb span:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <div id="ui-panel">
+    <h1>CodeCity</h1>
+
+    <div class="input-group">
+      <label>Local Repository Path</label>
+      <input type="text" id="local-path" placeholder="/path/to/repository">
+    </div>
+    <button class="btn btn-primary" id="analyze-local">Analyze Local Repo</button>
+
+    <div class="divider"></div>
+
+    <div class="input-group">
+      <label>GitHub Repository</label>
+      <input type="text" id="github-repo" placeholder="owner/repository">
+    </div>
+    <button class="btn btn-primary" id="analyze-github">Analyze GitHub Repo</button>
+
+    <div class="divider"></div>
+
+    <div class="view-toggle">
+      <button id="view-repos" class="active">Repositories</button>
+      <button id="view-dirs">Directories</button>
+    </div>
+
+    <div id="breadcrumb">
+      <span id="breadcrumb-root">All Repos</span> / <span id="breadcrumb-current"></span>
+    </div>
+
+    <div id="repo-list"></div>
+
+    <div id="legend">
+      <h3>Languages</h3>
+      <div id="legend-items"></div>
+    </div>
+  </div>
+
+  <div id="tooltip">
+    <h4 id="tooltip-name"></h4>
+    <div class="stat">
+      <span class="stat-label">Lines of Code</span>
+      <span id="tooltip-lines"></span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Age</span>
+      <span id="tooltip-age"></span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Primary Language</span>
+      <span id="tooltip-language"></span>
+    </div>
+  </div>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Analyzing repository...</div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
