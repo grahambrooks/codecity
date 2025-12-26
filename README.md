@@ -1,5 +1,7 @@
 # CodeCity
 
+![CodeCity Screenshot](docs/img/codecity.png)
+
 A 3D visualization tool that renders git repositories as buildings in a city. Each building's characteristics represent different aspects of the repository:
 
 - **Height** = Repository/directory age (days since first commit)
@@ -14,6 +16,7 @@ A 3D visualization tool that renders git repositories as buildings in a city. Ea
 - Interactive 3D navigation with orbit controls
 - Hover tooltips showing repository statistics
 - City blocks view showing all repositories with their directories
+
 
 ## Quick Start with Docker
 
