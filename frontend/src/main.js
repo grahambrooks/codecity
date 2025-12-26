@@ -1,6 +1,6 @@
 import { Scene } from './scene.js';
 import { UI } from './ui.js';
-import { layoutBuildings, layoutDirectories } from './buildings.js';
+import { layoutBuildings, layoutCityBlocks } from './buildings.js';
 import { analyzeLocalRepo, analyzeGithubRepo, getRepos } from './api.js';
 
 class CodeCity {
@@ -23,11 +23,12 @@ class CodeCity {
 
     this.scene.onSelect = (data) => {
       if (this.currentView === 'repos') {
-        // Find the full repo data
+        // Find the full repo data and switch to directory view
         const repo = this.repos.find((r) => r.id === data.id);
         if (repo) {
           this.selectedRepo = repo;
-          this.showDirectoryView(repo);
+          this.currentView = 'dirs';
+          this.renderCityBlocksView();
         }
       }
     };
@@ -53,39 +54,35 @@ class CodeCity {
       }
     });
 
-    this.ui.onViewChange = (view, repo) => {
+    this.ui.onViewChange = (view) => {
       this.currentView = view;
       if (view === 'repos') {
         this.renderRepoView();
-      } else if (view === 'dirs' && repo) {
-        this.showDirectoryView(repo);
+      } else if (view === 'dirs') {
+        this.renderCityBlocksView();
       }
     };
 
     this.ui.onRepoSelect = (repo) => {
       this.selectedRepo = repo;
-      if (this.currentView === 'dirs') {
-        this.showDirectoryView(repo);
-      } else {
+      if (this.currentView === 'repos') {
         // Highlight the selected building
         this.highlightBuilding(repo.id);
       }
+      // In directory view, selection just updates the UI highlight
     };
 
     // View toggle
     this.ui.elements.viewRepos.addEventListener('click', () => {
       this.currentView = 'repos';
+      this.ui.setView('repos');
       this.renderRepoView();
     });
 
     this.ui.elements.viewDirs.addEventListener('click', () => {
       this.currentView = 'dirs';
-      if (this.selectedRepo) {
-        this.showDirectoryView(this.selectedRepo);
-      } else if (this.repos.length > 0) {
-        this.selectedRepo = this.repos[0];
-        this.showDirectoryView(this.repos[0]);
-      }
+      this.ui.setView('dirs');
+      this.renderCityBlocksView();
     });
   }
 
@@ -163,21 +160,36 @@ class CodeCity {
     this.scene.focusOnBuildings();
   }
 
-  showDirectoryView(repo) {
-    if (!repo.directories || repo.directories.length === 0) {
-      alert('No directory data available for this repository');
+  renderCityBlocksView() {
+    if (this.repos.length === 0) {
+      return;
+    }
+
+    // Check if any repos have directories
+    const reposWithDirs = this.repos.filter(
+      (r) => r.directories && r.directories.length > 0
+    );
+
+    if (reposWithDirs.length === 0) {
+      alert('No directory data available. Analyze some repositories first.');
+      this.currentView = 'repos';
+      this.ui.setView('repos');
       return;
     }
 
     this.ui.setView('dirs');
-    this.ui.elements.breadcrumb.classList.add('visible');
-    this.ui.elements.breadcrumbCurrent.textContent = repo.name;
-
     this.scene.clearBuildings();
 
-    const layout = layoutDirectories(repo.directories, repo);
+    // Layout all repos as city blocks
+    const { buildings, blocks } = layoutCityBlocks(reposWithDirs);
 
-    layout.forEach(({ data, position, dimensions, color }) => {
+    // Render city blocks (ground planes with labels)
+    blocks.forEach((block) => {
+      this.scene.addCityBlock(block);
+    });
+
+    // Render buildings (directories)
+    buildings.forEach(({ data, position, dimensions, color }) => {
       this.scene.addBuilding(data, position, dimensions, color);
     });
 

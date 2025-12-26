@@ -18,9 +18,6 @@ export class UI {
       tooltipAge: document.getElementById('tooltip-age'),
       tooltipLanguage: document.getElementById('tooltip-language'),
       loading: document.getElementById('loading'),
-      breadcrumb: document.getElementById('breadcrumb'),
-      breadcrumbRoot: document.getElementById('breadcrumb-root'),
-      breadcrumbCurrent: document.getElementById('breadcrumb-current'),
     };
 
     this.repos = [];
@@ -38,24 +35,12 @@ export class UI {
     this.elements.viewDirs.addEventListener('click', () => {
       this.setView('dirs');
     });
-
-    this.elements.breadcrumbRoot.addEventListener('click', () => {
-      this.selectedRepo = null;
-      this.setView('repos');
-      if (this.onViewChange) {
-        this.onViewChange('repos', null);
-      }
-    });
   }
 
   setView(view) {
     this.currentView = view;
     this.elements.viewRepos.classList.toggle('active', view === 'repos');
     this.elements.viewDirs.classList.toggle('active', view === 'dirs');
-
-    if (view === 'repos') {
-      this.elements.breadcrumb.classList.remove('visible');
-    }
   }
 
   showLoading(show) {
@@ -70,7 +55,11 @@ export class UI {
       return;
     }
 
-    this.elements.tooltipName.textContent = data.name;
+    // Show repo name for directories (when in city blocks view)
+    const displayName = data.repoName
+      ? `${data.repoName} / ${data.name}`
+      : data.name;
+    this.elements.tooltipName.textContent = displayName;
     this.elements.tooltipLines.textContent = formatNumber(data.total_lines || data.lines || 0);
     this.elements.tooltipAge.textContent = formatAge(data.age_days || 0);
     this.elements.tooltipLanguage.textContent =
@@ -120,11 +109,6 @@ export class UI {
         });
         item.classList.add('selected');
         this.selectedRepo = repo;
-
-        if (this.currentView === 'dirs') {
-          this.elements.breadcrumb.classList.add('visible');
-          this.elements.breadcrumbCurrent.textContent = repo.name;
-        }
 
         if (this.onRepoSelect) {
           this.onRepoSelect(repo);

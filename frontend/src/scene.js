@@ -51,6 +51,14 @@ export class Scene {
     // Buildings group
     this.buildingsGroup = new THREE.Group();
     this.scene.add(this.buildingsGroup);
+
+    // City blocks group (for directory view)
+    this.blocksGroup = new THREE.Group();
+    this.scene.add(this.blocksGroup);
+
+    // Labels group
+    this.labelsGroup = new THREE.Group();
+    this.scene.add(this.labelsGroup);
   }
 
   setupLights() {
@@ -171,6 +179,7 @@ export class Scene {
   }
 
   clearBuildings() {
+    // Clear buildings
     while (this.buildingsGroup.children.length > 0) {
       const child = this.buildingsGroup.children[0];
       if (child.geometry) child.geometry.dispose();
@@ -178,6 +187,25 @@ export class Scene {
       this.buildingsGroup.remove(child);
     }
     this.buildings.clear();
+
+    // Clear blocks
+    while (this.blocksGroup.children.length > 0) {
+      const child = this.blocksGroup.children[0];
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) child.material.dispose();
+      this.blocksGroup.remove(child);
+    }
+
+    // Clear labels
+    while (this.labelsGroup.children.length > 0) {
+      const child = this.labelsGroup.children[0];
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (child.material.map) child.material.map.dispose();
+        child.material.dispose();
+      }
+      this.labelsGroup.remove(child);
+    }
   }
 
   addBuilding(data, position, dimensions, color) {
@@ -254,5 +282,87 @@ export class Scene {
     );
     this.controls.target.copy(center);
     this.controls.update();
+  }
+
+  addCityBlock(blockData) {
+    const { position, width, depth, color, repoName } = blockData;
+
+    // Create block ground plane
+    const blockGeometry = new THREE.PlaneGeometry(width, depth);
+    const blockMaterial = new THREE.MeshStandardMaterial({
+      color: new THREE.Color(color).multiplyScalar(0.3),
+      roughness: 0.8,
+      metalness: 0.1,
+      transparent: true,
+      opacity: 0.6,
+    });
+
+    const block = new THREE.Mesh(blockGeometry, blockMaterial);
+    block.rotation.x = -Math.PI / 2;
+    block.position.set(position.x, 0.02, position.z);
+    block.receiveShadow = true;
+    this.blocksGroup.add(block);
+
+    // Add border
+    const borderGeometry = new THREE.EdgesGeometry(blockGeometry);
+    const borderMaterial = new THREE.LineBasicMaterial({
+      color: new THREE.Color(color),
+      transparent: true,
+      opacity: 0.8,
+    });
+    const border = new THREE.LineSegments(borderGeometry, borderMaterial);
+    border.rotation.x = -Math.PI / 2;
+    border.position.set(position.x, 0.03, position.z);
+    this.blocksGroup.add(border);
+
+    // Add repo name label
+    this.addLabel(repoName, position, width, depth);
+  }
+
+  addLabel(text, position, blockWidth, blockDepth) {
+    // Create canvas for text
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 512;
+    canvas.height = 64;
+
+    // Draw text
+    context.fillStyle = 'rgba(0, 0, 0, 0)';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.font = 'bold 32px -apple-system, BlinkMacSystemFont, sans-serif';
+    context.fillStyle = '#ffffff';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+
+    // Truncate long names
+    let displayText = text;
+    if (context.measureText(text).width > canvas.width - 20) {
+      while (context.measureText(displayText + '...').width > canvas.width - 20 && displayText.length > 0) {
+        displayText = displayText.slice(0, -1);
+      }
+      displayText += '...';
+    }
+    context.fillText(displayText, canvas.width / 2, canvas.height / 2);
+
+    // Create texture and sprite
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+
+    const spriteMaterial = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.9,
+    });
+
+    const sprite = new THREE.Sprite(spriteMaterial);
+
+    // Scale based on block width
+    const scale = Math.max(blockWidth * 0.8, 10);
+    sprite.scale.set(scale, scale * 0.125, 1);
+
+    // Position at front of block
+    sprite.position.set(position.x, 0.5, position.z + blockDepth / 2 + 2);
+
+    this.labelsGroup.add(sprite);
   }
 }
