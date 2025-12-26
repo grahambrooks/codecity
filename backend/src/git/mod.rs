@@ -3,9 +3,12 @@ use crate::models::{
 };
 use chrono::Utc;
 use git2::Repository;
+use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
 use walkdir::WalkDir;
@@ -340,20 +343,49 @@ pub fn find_repositories(base_path: &str) -> Result<Vec<String>, GitError> {
     Ok(repos)
 }
 
-/// Analyze all repositories found in subdirectories
+/// Analyze all repositories found in subdirectories (parallel)
 pub fn analyze_directory(base_path: &str) -> Result<Vec<RepoAnalysis>, GitError> {
     let repo_paths = find_repositories(base_path)?;
-    let mut analyses = Vec::new();
+    let total = repo_paths.len();
 
-    for path in repo_paths {
-        match analyze_repository(&path) {
-            Ok(analysis) => analyses.push(analysis),
-            Err(e) => {
-                // Log but continue with other repos
-                tracing::warn!("Failed to analyze {}: {}", path, e);
-            }
-        }
+    if total == 0 {
+        return Ok(Vec::new());
     }
+
+    tracing::info!("Found {} repositories, analyzing in parallel...", total);
+
+    let completed = Arc::new(AtomicUsize::new(0));
+    let failed = Arc::new(AtomicUsize::new(0));
+
+    // Use rayon to analyze repositories in parallel
+    let analyses: Vec<RepoAnalysis> = repo_paths
+        .par_iter()
+        .filter_map(|path| {
+            let result = analyze_repository(path);
+            let done = completed.fetch_add(1, Ordering::Relaxed) + 1;
+
+            match result {
+                Ok(analysis) => {
+                    if done % 10 == 0 || done == total {
+                        tracing::info!("Progress: {}/{} repositories analyzed", done, total);
+                    }
+                    Some(analysis)
+                }
+                Err(e) => {
+                    failed.fetch_add(1, Ordering::Relaxed);
+                    tracing::warn!("Failed to analyze {}: {}", path, e);
+                    None
+                }
+            }
+        })
+        .collect();
+
+    let failed_count = failed.load(Ordering::Relaxed);
+    tracing::info!(
+        "Completed: {} succeeded, {} failed",
+        analyses.len(),
+        failed_count
+    );
 
     Ok(analyses)
 }

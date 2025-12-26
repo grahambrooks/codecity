@@ -21,7 +21,7 @@ The easiest way to run CodeCity is using Docker Compose:
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/grahambrooks/codecity.git
 cd codecity
 
 # Build and start the containers

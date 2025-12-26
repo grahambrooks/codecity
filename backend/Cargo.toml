@@ -27,3 +27,5 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tempfile = "3"
 walkdir = "2"
+rayon = "1.10"
+num_cpus = "1.16"

@@ -102,10 +102,26 @@ pub async fn scan_directory(
     State(store): State<RepoStore>,
     Json(request): Json<ScanDirectoryRequest>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
-    // First find all repositories
-    let repo_paths = match find_repositories(&request.path) {
-        Ok(paths) => paths,
-        Err(e) => {
+    let path = request.path.clone();
+
+    // Run CPU-bound work in a blocking task to not block the async runtime
+    let result = tokio::task::spawn_blocking(move || {
+        // First find all repositories
+        let repo_paths = find_repositories(&path)?;
+        let total_found = repo_paths.len();
+
+        // Analyze all found repositories in parallel using rayon
+        let analyses = analyze_directory(&path)?;
+        let total_analyzed = analyses.len();
+
+        Ok::<_, crate::git::GitError>((analyses, total_found, total_analyzed))
+    })
+    .await;
+
+    // Handle spawn_blocking join error
+    let (analyses, total_found, total_analyzed) = match result {
+        Ok(Ok(data)) => data,
+        Ok(Err(e)) => {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ErrorResponse {
@@ -113,24 +129,15 @@ pub async fn scan_directory(
                 }),
             ))
         }
-    };
-
-    let total_found = repo_paths.len();
-
-    // Analyze all found repositories
-    let analyses = match analyze_directory(&request.path) {
-        Ok(a) => a,
         Err(e) => {
             return Err((
-                StatusCode::BAD_REQUEST,
+                StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ErrorResponse {
-                    error: e.to_string(),
+                    error: format!("Task failed: {}", e),
                 }),
             ))
         }
     };
-
-    let total_analyzed = analyses.len();
 
     // Store all analyzed repos
     {

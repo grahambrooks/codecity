@@ -21,7 +21,7 @@ export class Scene {
     // Scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x1a1a2e);
-    this.scene.fog = new THREE.Fog(0x1a1a2e, 50, 200);
+    this.scene.fog = new THREE.Fog(0x1a1a2e, 100, 500);
 
     // Camera
     this.camera = new THREE.PerspectiveCamera(
@@ -45,8 +45,8 @@ export class Scene {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.maxPolarAngle = Math.PI / 2.1;
-    this.controls.minDistance = 10;
-    this.controls.maxDistance = 150;
+    this.controls.minDistance = 5;
+    this.controls.maxDistance = 500;
 
     // Buildings group
     this.buildingsGroup = new THREE.Group();
@@ -91,8 +91,8 @@ export class Scene {
   }
 
   setupGround() {
-    // Ground plane
-    const groundGeometry = new THREE.PlaneGeometry(200, 200);
+    // Ground plane - larger for many repos
+    const groundGeometry = new THREE.PlaneGeometry(500, 500);
     const groundMaterial = new THREE.MeshStandardMaterial({
       color: 0x2a2a4e,
       roughness: 0.9,
@@ -103,8 +103,8 @@ export class Scene {
     this.ground.receiveShadow = true;
     this.scene.add(this.ground);
 
-    // Grid helper
-    const grid = new THREE.GridHelper(200, 40, 0x3a3a5e, 0x3a3a5e);
+    // Grid helper - larger with more divisions
+    const grid = new THREE.GridHelper(500, 100, 0x3a3a5e, 0x3a3a5e);
     grid.position.y = 0.01;
     this.scene.add(grid);
   }
@@ -266,19 +266,27 @@ export class Scene {
   focusOnBuildings() {
     if (this.buildingsGroup.children.length === 0) return;
 
-    // Calculate bounding box
-    const box = new THREE.Box3().setFromObject(this.buildingsGroup);
+    // Calculate bounding box including blocks if present
+    const box = new THREE.Box3();
+    box.setFromObject(this.buildingsGroup);
+    if (this.blocksGroup.children.length > 0) {
+      box.expandByObject(this.blocksGroup);
+    }
+
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
 
-    // Position camera to see all buildings
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 2;
+    // Position camera to see all buildings - use tighter fit
+    const maxDim = Math.max(size.x, size.z);
+    const fov = this.camera.fov * (Math.PI / 180);
+    const distance = (maxDim / 2) / Math.tan(fov / 2) * 1.2;
 
+    // Position camera at an angle for better view
+    const cameraDistance = Math.max(distance, 30);
     this.camera.position.set(
-      center.x + distance,
-      distance * 0.8,
-      center.z + distance
+      center.x + cameraDistance * 0.5,
+      cameraDistance * 0.6,
+      center.z + cameraDistance * 0.5
     );
     this.controls.target.copy(center);
     this.controls.update();
@@ -323,21 +331,23 @@ export class Scene {
     // Create canvas for text
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
-    canvas.width = 512;
-    canvas.height = 64;
+    canvas.width = 256;
+    canvas.height = 32;
 
     // Draw text
     context.fillStyle = 'rgba(0, 0, 0, 0)';
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.font = 'bold 32px -apple-system, BlinkMacSystemFont, sans-serif';
+    context.font = 'bold 20px -apple-system, BlinkMacSystemFont, sans-serif';
     context.fillStyle = '#ffffff';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
 
+    // Get just the repo name (after the last /)
+    let displayText = text.includes('/') ? text.split('/').pop() : text;
+
     // Truncate long names
-    let displayText = text;
-    if (context.measureText(text).width > canvas.width - 20) {
-      while (context.measureText(displayText + '...').width > canvas.width - 20 && displayText.length > 0) {
+    if (context.measureText(displayText).width > canvas.width - 10) {
+      while (context.measureText(displayText + '...').width > canvas.width - 10 && displayText.length > 0) {
         displayText = displayText.slice(0, -1);
       }
       displayText += '...';
@@ -351,17 +361,17 @@ export class Scene {
     const spriteMaterial = new THREE.SpriteMaterial({
       map: texture,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.85,
     });
 
     const sprite = new THREE.Sprite(spriteMaterial);
 
-    // Scale based on block width
-    const scale = Math.max(blockWidth * 0.8, 10);
+    // Scale based on block width - more compact
+    const scale = Math.max(blockWidth * 0.6, 5);
     sprite.scale.set(scale, scale * 0.125, 1);
 
-    // Position at front of block
-    sprite.position.set(position.x, 0.5, position.z + blockDepth / 2 + 2);
+    // Position at front of block - closer
+    sprite.position.set(position.x, 0.3, position.z + blockDepth / 2 + 0.8);
 
     this.labelsGroup.add(sprite);
   }
