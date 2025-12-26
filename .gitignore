@@ -1,2 +1,24 @@
+# Rust
 **/target/
+
+# Node
 **/node_modules/
+frontend/dist/
+
+# Environment
+.env
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

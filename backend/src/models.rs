@@ -40,6 +40,18 @@ pub struct AnalyzeGithubRequest {
     pub repo: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ScanDirectoryRequest {
+    pub path: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ScanDirectoryResponse {
+    pub repos: Vec<RepoAnalysis>,
+    pub total_found: usize,
+    pub total_analyzed: usize,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     pub error: String,

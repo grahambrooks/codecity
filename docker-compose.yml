@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codecity-backend
+    ports:
+      - "3001:3001"
+    volumes:
+      # Mount host filesystem for local repo analysis (read-only)
+      - /:/host:ro
+    environment:
+      - RUST_LOG=codecity_backend=info
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: codecity-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

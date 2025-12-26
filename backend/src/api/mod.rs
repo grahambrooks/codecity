@@ -9,9 +9,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::git::analyze_repository;
+use crate::git::{analyze_directory, analyze_repository, find_repositories};
 use crate::github::analyze_github_repo;
-use crate::models::{AnalyzeGithubRequest, AnalyzeLocalRequest, ErrorResponse, RepoAnalysis};
+use crate::models::{
+    AnalyzeGithubRequest, AnalyzeLocalRequest, ErrorResponse, RepoAnalysis, ScanDirectoryRequest,
+    ScanDirectoryResponse,
+};
 
 pub type RepoStore = Arc<RwLock<HashMap<String, RepoAnalysis>>>;
 
@@ -93,4 +96,56 @@ pub async fn list_repos(State(store): State<RepoStore>) -> impl IntoResponse {
     let repos = store.read().await;
     let list: Vec<RepoAnalysis> = repos.values().cloned().collect();
     Json(list)
+}
+
+pub async fn scan_directory(
+    State(store): State<RepoStore>,
+    Json(request): Json<ScanDirectoryRequest>,
+) -> Result<impl IntoResponse, (StatusCode, Json<ErrorResponse>)> {
+    // First find all repositories
+    let repo_paths = match find_repositories(&request.path) {
+        Ok(paths) => paths,
+        Err(e) => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: e.to_string(),
+                }),
+            ))
+        }
+    };
+
+    let total_found = repo_paths.len();
+
+    // Analyze all found repositories
+    let analyses = match analyze_directory(&request.path) {
+        Ok(a) => a,
+        Err(e) => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: e.to_string(),
+                }),
+            ))
+        }
+    };
+
+    let total_analyzed = analyses.len();
+
+    // Store all analyzed repos
+    {
+        let mut store = store.write().await;
+        for analysis in &analyses {
+            store.insert(analysis.id.clone(), analysis.clone());
+        }
+    }
+
+    Ok((
+        StatusCode::OK,
+        Json(ScanDirectoryResponse {
+            repos: analyses,
+            total_found,
+            total_analyzed,
+        }),
+    ))
 }

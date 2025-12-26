@@ -1,6 +1,5 @@
 use crate::models::{
-    get_language_color, get_language_from_extension, DirectoryNode, LanguageBreakdown,
-    RepoAnalysis,
+    get_language_color, get_language_from_extension, DirectoryNode, LanguageBreakdown, RepoAnalysis,
 };
 use chrono::Utc;
 use git2::Repository;
@@ -287,4 +286,74 @@ fn is_ignored(path: &Path, repo_path: &Path) -> bool {
     }
 
     false
+}
+
+/// Find all git repositories in subdirectories of the given path
+pub fn find_repositories(base_path: &str) -> Result<Vec<String>, GitError> {
+    let base = Path::new(base_path);
+    if !base.exists() {
+        return Err(GitError::InvalidPath);
+    }
+
+    let mut repos = Vec::new();
+
+    // Directories to skip when scanning
+    let skip_dirs = [
+        "node_modules",
+        "target",
+        ".cargo",
+        "vendor",
+        ".venv",
+        "venv",
+        "__pycache__",
+    ];
+
+    for entry in WalkDir::new(base)
+        .min_depth(1)
+        .into_iter()
+        .filter_entry(|e| {
+            // Skip common non-repo directories for performance
+            if let Some(name) = e.file_name().to_str() {
+                if skip_dirs.contains(&name) {
+                    return false;
+                }
+                // Skip hidden directories (except we need to find .git)
+                if name.starts_with('.') && name != ".git" {
+                    return false;
+                }
+            }
+            true
+        })
+        .filter_map(|e| e.ok())
+    {
+        // Check if this directory contains a .git folder
+        if entry.file_type().is_dir() {
+            let git_dir = entry.path().join(".git");
+            if git_dir.exists() && git_dir.is_dir() {
+                if let Some(path_str) = entry.path().to_str() {
+                    repos.push(path_str.to_string());
+                }
+            }
+        }
+    }
+
+    Ok(repos)
+}
+
+/// Analyze all repositories found in subdirectories
+pub fn analyze_directory(base_path: &str) -> Result<Vec<RepoAnalysis>, GitError> {
+    let repo_paths = find_repositories(base_path)?;
+    let mut analyses = Vec::new();
+
+    for path in repo_paths {
+        match analyze_repository(&path) {
+            Ok(analysis) => analyses.push(analysis),
+            Err(e) => {
+                // Log but continue with other repos
+                tracing::warn!("Failed to analyze {}: {}", path, e);
+            }
+        }
+    }
+
+    Ok(analyses)
 }

@@ -8,6 +8,8 @@ export class UI {
       analyzeLocal: document.getElementById('analyze-local'),
       githubRepo: document.getElementById('github-repo'),
       analyzeGithub: document.getElementById('analyze-github'),
+      scanPath: document.getElementById('scan-path'),
+      scanDir: document.getElementById('scan-dir'),
       viewRepos: document.getElementById('view-repos'),
       viewDirs: document.getElementById('view-dirs'),
       repoList: document.getElementById('repo-list'),
@@ -47,6 +49,7 @@ export class UI {
     this.elements.loading.classList.toggle('visible', show);
     this.elements.analyzeLocal.disabled = show;
     this.elements.analyzeGithub.disabled = show;
+    this.elements.scanDir.disabled = show;
   }
 
   showTooltip(data, x, y) {
@@ -179,5 +182,13 @@ export class UI {
 
   clearGithubRepo() {
     this.elements.githubRepo.value = '';
+  }
+
+  getScanPath() {
+    return this.elements.scanPath.value.trim();
+  }
+
+  clearScanPath() {
+    this.elements.scanPath.value = '';
   }
 }

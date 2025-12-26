@@ -50,3 +50,18 @@ export async function getRepoTree(id) {
   }
   return response.json();
 }
+
+export async function scanDirectory(path) {
+  const response = await fetch(`${API_BASE}/scan`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to scan directory');
+  }
+
+  return response.json();
+}

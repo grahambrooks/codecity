@@ -3,7 +3,10 @@ mod git;
 mod github;
 mod models;
 
-use api::{analyze_github, analyze_local, get_repo, get_repo_tree, health, list_repos, RepoStore};
+use api::{
+    analyze_github, analyze_local, get_repo, get_repo_tree, health, list_repos, scan_directory,
+    RepoStore,
+};
 use axum::{
     routing::{get, post},
     Router,
@@ -40,6 +43,7 @@ async fn main() {
         .route("/api/repos", get(list_repos))
         .route("/api/analyze/local", post(analyze_local))
         .route("/api/analyze/github", post(analyze_github))
+        .route("/api/scan", post(scan_directory))
         .route("/api/repo/{id}", get(get_repo))
         .route("/api/repo/{id}/tree", get(get_repo_tree))
         .layer(cors)

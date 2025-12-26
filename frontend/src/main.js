@@ -1,7 +1,7 @@
 import { Scene } from './scene.js';
 import { UI } from './ui.js';
 import { layoutBuildings, layoutCityBlocks } from './buildings.js';
-import { analyzeLocalRepo, analyzeGithubRepo, getRepos } from './api.js';
+import { analyzeLocalRepo, analyzeGithubRepo, getRepos, scanDirectory } from './api.js';
 
 class CodeCity {
   constructor() {
@@ -51,6 +51,16 @@ class CodeCity {
     this.ui.elements.githubRepo.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         this.analyzeGithub();
+      }
+    });
+
+    this.ui.elements.scanDir.addEventListener('click', () => {
+      this.scanDir();
+    });
+
+    this.ui.elements.scanPath.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        this.scanDir();
       }
     });
 
@@ -130,6 +140,43 @@ class CodeCity {
       alert(`Error: ${error.message}`);
     } finally {
       this.ui.showLoading(false);
+    }
+  }
+
+  async scanDir() {
+    const path = this.ui.getScanPath();
+    if (!path) return;
+
+    this.ui.showLoading(true);
+
+    try {
+      const result = await scanDirectory(path);
+      if (result.repos.length === 0) {
+        alert('No git repositories found in the specified directory.');
+      } else {
+        // Add all found repos
+        result.repos.forEach((repo) => {
+          this.addRepoSilent(repo);
+        });
+        this.ui.updateRepoList(this.repos);
+        this.renderRepoView();
+        this.ui.clearScanPath();
+        alert(`Found and analyzed ${result.total_analyzed} repositories.`);
+      }
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    } finally {
+      this.ui.showLoading(false);
+    }
+  }
+
+  addRepoSilent(repo) {
+    // Add repo without triggering re-render (for batch adds)
+    const existingIndex = this.repos.findIndex((r) => r.id === repo.id);
+    if (existingIndex >= 0) {
+      this.repos[existingIndex] = repo;
+    } else {
+      this.repos.push(repo);
     }
   }
 
