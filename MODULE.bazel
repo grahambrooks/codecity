@@ -1,0 +1,62 @@
+"""Bazel module definition for CodeCity."""
+
+module(
+    name = "codecity",
+    version = "0.1.0",
+)
+
+# Bazel Skylib - Common utilities
+bazel_dep(name = "bazel_skylib", version = "1.8.2")
+
+# Platforms for cross-platform builds
+bazel_dep(name = "platforms", version = "1.0.0")
+
+# Rust rules
+bazel_dep(name = "rules_rust", version = "0.68.1")
+
+# OCI container rules (modern replacement for rules_docker)
+bazel_dep(name = "rules_oci", version = "2.0.1")
+bazel_dep(name = "rules_pkg", version = "1.0.1")
+
+# ===== Rust toolchain configuration =====
+rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
+rust.toolchain(
+    edition = "2021",
+    versions = ["1.85.0"],
+    extra_target_triples = ["x86_64-unknown-linux-gnu"],
+)
+use_repo(rust, "rust_toolchains")
+
+register_toolchains("@rust_toolchains//:all")
+
+# Rust crates from Cargo.toml
+crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate")
+crate.from_cargo(
+    name = "crates",
+    cargo_lockfile = "//backend:Cargo.lock",
+    manifests = ["//backend:Cargo.toml"],
+)
+use_repo(crate, "crates")
+
+# ===== OCI base images =====
+oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
+
+# Debian slim for Rust backend (debian:bookworm-slim)
+oci.pull(
+    name = "debian_slim",
+    digest = "sha256:e899040a73d36e2b36fa33216943539d9957cba8172b858097c2cabcdb20a3e2",
+    image = "docker.io/library/debian",
+    platforms = ["linux/amd64"],
+    tag = "bookworm-slim",
+)
+
+# Nginx Alpine for frontend
+oci.pull(
+    name = "nginx_alpine",
+    digest = "sha256:8491795299c8e739b7fcc6285d531d9812ce2666e07bd3dd8db00020ad132295",
+    image = "docker.io/library/nginx",
+    platforms = ["linux/amd64"],
+    tag = "alpine",
+)
+
+use_repo(oci, "debian_slim", "debian_slim_linux_amd64", "nginx_alpine", "nginx_alpine_linux_amd64")

@@ -1,0 +1,76 @@
+"""BUILD file for CodeCity backend (Rust)."""
+
+load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+package(default_visibility = ["//visibility:public"])
+
+# Export Cargo files for crate_universe
+exports_files([
+    "Cargo.toml",
+    "Cargo.lock",
+])
+
+# Common deps for backend binary
+BACKEND_DEPS = [
+    "@crates//:axum",
+    "@crates//:chrono",
+    "@crates//:git2",
+    "@crates//:num_cpus",
+    "@crates//:octocrab",
+    "@crates//:rayon",
+    "@crates//:serde",
+    "@crates//:serde_json",
+    "@crates//:tempfile",
+    "@crates//:thiserror",
+    "@crates//:tokio",
+    "@crates//:tower-http",
+    "@crates//:tracing",
+    "@crates//:tracing-subscriber",
+    "@crates//:uuid",
+    "@crates//:walkdir",
+]
+
+# Rust binary target (native platform)
+rust_binary(
+    name = "codecity-backend",
+    srcs = glob(["src/**/*.rs"]),
+    edition = "2021",
+    deps = BACKEND_DEPS,
+)
+
+# Package the binary into a tar layer
+# Note: For container images, use Docker build or cross-compile with --platforms
+pkg_tar(
+    name = "backend_layer",
+    srcs = [":codecity-backend"],
+    package_dir = "/app",
+)
+
+# OCI image for the backend (targeting linux/amd64)
+oci_image(
+    name = "image",
+    base = "@debian_slim_linux_amd64",
+    entrypoint = ["/app/codecity-backend"],
+    exposed_ports = ["3001/tcp"],
+    env = {
+        "RUST_LOG": "codecity_backend=info",
+    },
+    tars = [":backend_layer"],
+)
+
+# Load image into Docker (creates tarball as output)
+oci_load(
+    name = "image_tarball",
+    image = ":image",
+    repo_tags = ["codecity-backend:latest"],
+)
+
+# Push target (configure registry as needed)
+oci_push(
+    name = "push",
+    image = ":image",
+    remote_tags = ["latest"],
+    repository = "codecity-backend",
+)

@@ -22,3 +22,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Bazel
+bazel-*
+.bazel-cache/
+MODULE.bazel.lock

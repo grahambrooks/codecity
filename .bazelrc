@@ -1,0 +1,55 @@
+# CodeCity Bazel Configuration
+
+# Use bzlmod for dependency management
+common --enable_bzlmod
+
+# Build settings
+build --incompatible_strict_action_env
+
+# Pass through PATH for local genrules (needed for npm/node)
+build --action_env=PATH
+
+# Enable disk cache for faster builds
+build --disk_cache=~/.cache/bazel
+
+# Show timestamps in build output
+build --show_timestamps
+
+# Improve error messages
+build --verbose_failures
+
+# Enable remote caching preparation (uncomment and configure for CI)
+# build --remote_cache=grpcs://your-cache-server
+
+# Test settings
+test --test_output=errors
+test --test_summary=detailed
+
+# Coverage settings (if needed)
+coverage --combined_report=lcov
+
+# Platform configuration for containers
+# Use these when building for Linux containers on macOS
+build:linux --platforms=@rules_rust//rust/platform:linux
+
+# macOS specific settings
+build:macos --apple_platform_type=macos
+
+# Release build configuration
+build:release --compilation_mode=opt
+build:release -c opt
+
+# Debug configuration
+build:debug --compilation_mode=dbg
+build:debug -c dbg
+
+# CI configuration
+build:ci --disk_cache=
+build:ci --color=no
+build:ci --curses=no
+
+# Local development defaults
+build --config=debug
+
+# Convenience aliases
+build:opt --config=release

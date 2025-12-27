@@ -1,0 +1,32 @@
+"""Root BUILD file for CodeCity."""
+
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+
+# Package visibility settings
+package(default_visibility = ["//visibility:public"])
+
+# Linux x86_64 platform for container builds
+platform(
+    name = "linux_x86_64",
+    constraint_values = [
+        "@platforms//os:linux",
+        "@platforms//cpu:x86_64",
+    ],
+)
+
+# Build configuration flags
+bool_flag(
+    name = "release",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "release_build",
+    flag_values = {":release": "True"},
+)
+
+# Filegroup for common files
+filegroup(
+    name = "docker_compose",
+    srcs = ["docker-compose.yml"],
+)

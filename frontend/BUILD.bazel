@@ -1,0 +1,100 @@
+"""BUILD file for CodeCity frontend (JavaScript/Vite)."""
+
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
+load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
+
+# NOTE: Frontend is built using npm via genrule (no aspect_rules_js needed)
+
+package(default_visibility = ["//visibility:public"])
+
+# Source files
+filegroup(
+    name = "sources",
+    srcs = glob([
+        "src/**/*.js",
+        "index.html",
+        "vite.config.js",
+    ]) + [
+        "package.json",
+        "package-lock.json",
+    ],
+)
+
+# Build the frontend using Vite
+# This uses a genrule since Vite builds are self-contained with npm
+genrule(
+    name = "build",
+    srcs = [
+        ":sources",
+        "package.json",
+    ],
+    outs = ["dist.tar"],
+    cmd = """
+        set -e
+        # Set up the build directory
+        BUILD_DIR=$$(mktemp -d)
+        FRONTEND_DIR=$$(dirname $(location package.json))
+        cp -r $$FRONTEND_DIR/* $$BUILD_DIR/
+
+        # Install dependencies and build
+        cd $$BUILD_DIR
+        npm ci --silent
+        npm run build --silent
+
+        # Create tarball of the output (back in original dir)
+        cd -
+        tar -cf $@ -C $$BUILD_DIR/dist .
+    """,
+    local = True,
+    message = "Building frontend with Vite",
+)
+
+# Nginx configuration for the container
+filegroup(
+    name = "nginx_config",
+    srcs = ["nginx.conf"],
+)
+
+# Package the built frontend assets
+# The build output is already a tar, we just need to add the package_dir prefix
+pkg_tar(
+    name = "frontend_assets_layer",
+    deps = [":build"],
+    package_dir = "/usr/share/nginx/html",
+)
+
+# Package the nginx config
+pkg_tar(
+    name = "nginx_config_layer",
+    srcs = [":nginx_config"],
+    package_dir = "/etc/nginx/conf.d",
+    remap_paths = {
+        "nginx.conf": "default.conf",
+    },
+)
+
+# OCI image for the frontend (targeting linux/amd64)
+oci_image(
+    name = "image",
+    base = "@nginx_alpine_linux_amd64",
+    exposed_ports = ["80/tcp"],
+    tars = [
+        ":frontend_assets_layer",
+        ":nginx_config_layer",
+    ],
+)
+
+# Load image into Docker (creates tarball as output)
+oci_load(
+    name = "image_tarball",
+    image = ":image",
+    repo_tags = ["codecity-frontend:latest"],
+)
+
+# Push target (configure registry as needed)
+oci_push(
+    name = "push",
+    image = ":image",
+    remote_tags = ["latest"],
+    repository = "codecity-frontend",
+)

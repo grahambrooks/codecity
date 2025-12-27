@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: codecity
+
+resources:
+  - namespace.yaml
+  - backend-deployment.yaml
+  - backend-service.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+  - ingress.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: codecity
+      app.kubernetes.io/managed-by: kustomize
+    includeSelectors: true
+
+images:
+  - name: codecity-backend
+    newName: codecity-backend
+    newTag: latest
+  - name: codecity-frontend
+    newName: codecity-frontend
+    newTag: latest
