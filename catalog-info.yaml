@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: codecity
+  title: CodeCity
+  description: A 3D visualization tool that renders git repositories as buildings in a city.
+  annotations:
+    github.com/project-slug: grahambrooks/codecity
+  tags:
+    - rust
+    - javascript
+    - threejs
+    - bazel
+    - visualization
+spec:
+  type: website
+  lifecycle: experimental
+  owner: user:grahambrooks

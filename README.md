@@ -40,6 +40,46 @@ When running in Docker, local repository paths must be prefixed with `/host/` si
 - Host path: `/Users/me/projects`
 - Container path: `/host/Users/me/projects`
 
+## Development Container
+
+For a consistent development experience, use the included devcontainer with VS Code or GitHub Codespaces.
+
+### VS Code Dev Containers
+
+1. Install the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+2. Open the project in VS Code
+3. Click "Reopen in Container" when prompted (or use Command Palette: "Dev Containers: Reopen in Container")
+
+### GitHub Codespaces
+
+Click the "Code" button on GitHub and select "Open with Codespaces" to launch a cloud-based development environment.
+
+### What's Included
+
+The devcontainer provides:
+- **Rust 1.85** with rust-analyzer, clippy, and rustfmt
+- **Node.js 22** for frontend development
+- **Bazel 8.5** via Bazelisk for builds
+- **Docker-in-Docker** for container builds
+- **kubectl** for Kubernetes deployment
+- Pre-configured VS Code extensions for Rust, JavaScript, Docker, and Kubernetes
+
+### Quick Commands in Devcontainer
+
+```bash
+# Backend development
+cd backend && cargo run
+
+# Frontend development
+cd frontend && npm run dev
+
+# Build everything with Bazel
+bazel build //...
+
+# Deploy to Kubernetes
+bazel run //k8s:deploy_all
+```
+
 ## Bazel Build
 
 CodeCity uses Bazel for reproducible builds and Kubernetes deployment.
