@@ -12,7 +12,7 @@ bazel_dep(name = "bazel_skylib", version = "1.9.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 
 # Rust rules
-bazel_dep(name = "rules_rust", version = "0.71.3")
+bazel_dep(name = "rules_rust", version = "0.72.0")
 
 # OCI container rules (modern replacement for rules_docker)
 bazel_dep(name = "rules_oci", version = "2.3.0")
