@@ -22,7 +22,7 @@ bazel_dep(name = "rules_pkg", version = "1.3.0")
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
-    versions = ["1.85.0"],
+    versions = ["1.98.0"],
     extra_target_triples = ["x86_64-unknown-linux-gnu"],
 )
 use_repo(rust, "rust_toolchains")
