@@ -24,4 +24,6 @@ jobs:
           disk-cache: ${{ github.workflow }}
           repository-cache: true
       - run: bazel build //...
-      - run: bazel test //... --test_output=errors
+      # Bazel exits 4 when a test pattern matches no test targets; the repo has
+      # none yet, so treat that as success rather than a failed gate.
+      - run: bazel test //... --test_output=errors || [ $? -eq 4 ]
