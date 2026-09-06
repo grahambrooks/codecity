@@ -1,0 +1,21 @@
+MODULE.bazel
+  s_468f8476e679c5::t_9265480edd1e82 17-19
+k8s/BUILD.bazel
+  s_468f8476e679c5::t_f8557dd2837bd6 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4644d9ed0ae1bbd97ce84368dbf55e9c4c6acd98",
+  "prompts": {},
+  "sessions": {
+    "s_468f8476e679c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "334fa579-0e84-4f30-9780-175947feeaf4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
