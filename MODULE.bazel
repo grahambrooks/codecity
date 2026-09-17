@@ -53,7 +53,7 @@ oci.pull(
 # Nginx Alpine for frontend
 oci.pull(
     name = "nginx_alpine",
-    digest = "sha256:17ad11d84df6c69e327c0894125f712ec1f1de627b5e5ed7e12ca2ed8cd5daf8",
+    digest = "sha256:c8497b180665e631ec92a5091125bec5b214f0e2b99409e30653a125b37557da",
     image = "docker.io/library/nginx",
     platforms = ["linux/amd64"],
     tag = "alpine",
