@@ -59,7 +59,7 @@ Click the "Code" button on GitHub and select "Open with Codespaces" to launch a 
 The devcontainer provides:
 - **Rust 1.85** with rust-analyzer, clippy, and rustfmt
 - **Node.js 22** for frontend development
-- **Bazel 8.5** via Bazelisk for builds
+- **Bazel 9** via Bazelisk for builds
 - **Docker-in-Docker** for container builds
 - **kubectl** for Kubernetes deployment
 - Pre-configured VS Code extensions for Rust, JavaScript, Docker, and Kubernetes
@@ -86,7 +86,7 @@ CodeCity uses Bazel for reproducible builds and Kubernetes deployment.
 
 ### Prerequisites
 
-- [Bazel](https://bazel.build/) 7.4+ (or [Bazelisk](https://github.com/bazelbuild/bazelisk) recommended)
+- [Bazel](https://bazel.build/) 9+ (or [Bazelisk](https://github.com/bazelbuild/bazelisk) recommended)
 - Docker (for container image builds)
 - kubectl (for Kubernetes deployment)
 
