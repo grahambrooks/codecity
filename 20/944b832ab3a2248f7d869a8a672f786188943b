@@ -1,0 +1,23 @@
+.github/workflows/ci.yml
+  s_c7db583e01ac64::t_2448a2b9024f81 21
+MODULE.bazel
+  s_c7db583e01ac64::t_d74553987f6e91 56
+backend/Cargo.lock
+  s_c7db583e01ac64::t_8b4f9489397d4e 1140,1142,2003,2005
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20944b832ab3a2248f7d869a8a672f786188943b",
+  "prompts": {},
+  "sessions": {
+    "s_c7db583e01ac64": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a64f563f-ca61-4776-97cf-501db44bb230",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Graham Brooks <graham@grahambrooks.com>"
+    }
+  }
+}
