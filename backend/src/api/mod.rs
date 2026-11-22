@@ -1,8 +1,8 @@
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde_json::json;
 use std::collections::HashMap;
@@ -127,7 +127,7 @@ pub async fn scan_directory(
                 Json(ErrorResponse {
                     error: e.to_string(),
                 }),
-            ))
+            ));
         }
         Err(e) => {
             return Err((
@@ -135,7 +135,7 @@ pub async fn scan_directory(
                 Json(ErrorResponse {
                     error: format!("Task failed: {}", e),
                 }),
-            ))
+            ));
         }
     };
 

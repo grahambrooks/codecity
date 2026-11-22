@@ -4,12 +4,12 @@ mod github;
 mod models;
 
 use api::{
-    analyze_github, analyze_local, get_repo, get_repo_tree, health, list_repos, scan_directory,
-    RepoStore,
+    RepoStore, analyze_github, analyze_local, get_repo, get_repo_tree, health, list_repos,
+    scan_directory,
 };
 use axum::{
-    routing::{get, post},
     Router,
+    routing::{get, post},
 };
 use std::collections::HashMap;
 use std::sync::Arc;

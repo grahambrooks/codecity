@@ -1,5 +1,5 @@
 use crate::models::{
-    get_language_color, get_language_from_extension, DirectoryNode, LanguageBreakdown, RepoAnalysis,
+    DirectoryNode, LanguageBreakdown, RepoAnalysis, get_language_color, get_language_from_extension,
 };
 use chrono::Utc;
 use git2::Repository;
@@ -7,8 +7,8 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use thiserror::Error;
 use uuid::Uuid;
 use walkdir::WalkDir;
@@ -75,9 +75,10 @@ fn get_repo_age_days(repo: &Repository) -> Result<u64, GitError> {
     Err(GitError::NoCommits)
 }
 
-fn analyze_files(
-    repo_path: &Path,
-) -> Result<(u64, HashMap<String, u64>, Vec<DirectoryNode>), GitError> {
+/// Total lines, lines per language, and the directory tree.
+type FileAnalysis = (u64, HashMap<String, u64>, Vec<DirectoryNode>);
+
+fn analyze_files(repo_path: &Path) -> Result<FileAnalysis, GitError> {
     let mut total_lines = 0u64;
     let mut language_stats: HashMap<String, u64> = HashMap::new();
     let mut dir_stats: HashMap<String, DirStats> = HashMap::new();
@@ -87,27 +88,25 @@ fn analyze_files(
         .filter_entry(|e| !is_ignored(e.path(), repo_path))
         .filter_map(|e| e.ok())
     {
-        if entry.file_type().is_file() {
-            if let Some(ext) = entry.path().extension() {
-                if let Some(language) = get_language_from_extension(&ext.to_string_lossy()) {
-                    if let Ok(content) = fs::read_to_string(entry.path()) {
-                        let lines = content.lines().count() as u64;
-                        total_lines += lines;
-                        *language_stats.entry(language.to_string()).or_insert(0) += lines;
+        if entry.file_type().is_file()
+            && let Some(ext) = entry.path().extension()
+            && let Some(language) = get_language_from_extension(&ext.to_string_lossy())
+            && let Ok(content) = fs::read_to_string(entry.path())
+        {
+            let lines = content.lines().count() as u64;
+            total_lines += lines;
+            *language_stats.entry(language.to_string()).or_insert(0) += lines;
 
-                        // Track directory stats
-                        if let Some(parent) = entry.path().parent() {
-                            let rel_path = parent
-                                .strip_prefix(repo_path)
-                                .unwrap_or(parent)
-                                .to_string_lossy()
-                                .to_string();
-                            let dir_stat = dir_stats.entry(rel_path).or_insert_with(DirStats::new);
-                            dir_stat.lines += lines;
-                            *dir_stat.languages.entry(language.to_string()).or_insert(0) += lines;
-                        }
-                    }
-                }
+            // Track directory stats
+            if let Some(parent) = entry.path().parent() {
+                let rel_path = parent
+                    .strip_prefix(repo_path)
+                    .unwrap_or(parent)
+                    .to_string_lossy()
+                    .to_string();
+                let dir_stat = dir_stats.entry(rel_path).or_default();
+                dir_stat.lines += lines;
+                *dir_stat.languages.entry(language.to_string()).or_insert(0) += lines;
             }
         }
     }
@@ -122,12 +121,6 @@ fn analyze_files(
 struct DirStats {
     lines: u64,
     languages: HashMap<String, u64>,
-}
-
-impl DirStats {
-    fn new() -> Self {
-        Self::default()
-    }
 }
 
 fn build_directory_tree(
@@ -190,7 +183,7 @@ fn build_directory_tree(
     }
 
     // Sort by lines of code
-    root_dirs.sort_by(|a, b| b.lines.cmp(&a.lines));
+    root_dirs.sort_by_key(|d| std::cmp::Reverse(d.lines));
 
     Ok(root_dirs)
 }
@@ -247,7 +240,7 @@ fn calculate_language_breakdown(
         })
         .collect();
 
-    breakdown.sort_by(|a, b| b.lines.cmp(&a.lines));
+    breakdown.sort_by_key(|d| std::cmp::Reverse(d.lines));
     breakdown
 }
 
@@ -284,11 +277,7 @@ fn is_ignored(path: &Path, repo_path: &Path) -> bool {
     }
 
     // Ignore hidden files/dirs (except root)
-    if path_str.contains("/.") && !path_str.starts_with(".git") {
-        return true;
-    }
-
-    false
+    path_str.contains("/.") && !path_str.starts_with(".git")
 }
 
 /// Find all git repositories in subdirectories of the given path
@@ -332,10 +321,11 @@ pub fn find_repositories(base_path: &str) -> Result<Vec<String>, GitError> {
         // Check if this directory contains a .git folder
         if entry.file_type().is_dir() {
             let git_dir = entry.path().join(".git");
-            if git_dir.exists() && git_dir.is_dir() {
-                if let Some(path_str) = entry.path().to_str() {
-                    repos.push(path_str.to_string());
-                }
+            if git_dir.exists()
+                && git_dir.is_dir()
+                && let Some(path_str) = entry.path().to_str()
+            {
+                repos.push(path_str.to_string());
             }
         }
     }
@@ -366,7 +356,7 @@ pub fn analyze_directory(base_path: &str) -> Result<Vec<RepoAnalysis>, GitError>
 
             match result {
                 Ok(analysis) => {
-                    if done % 10 == 0 || done == total {
+                    if done.is_multiple_of(10) || done == total {
                         tracing::info!("Progress: {}/{} repositories analyzed", done, total);
                     }
                     Some(analysis)

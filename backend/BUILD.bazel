@@ -17,7 +17,6 @@ BACKEND_DEPS = [
     "@crates//:axum",
     "@crates//:chrono",
     "@crates//:git2",
-    "@crates//:num_cpus",
     "@crates//:octocrab",
     "@crates//:rayon",
     "@crates//:serde",
@@ -36,7 +35,7 @@ BACKEND_DEPS = [
 rust_binary(
     name = "codecity-backend",
     srcs = glob(["src/**/*.rs"]),
-    edition = "2021",
+    edition = "2024",
     deps = BACKEND_DEPS,
 )
 

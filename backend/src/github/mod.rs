@@ -1,4 +1,4 @@
-use crate::git::{analyze_repository, GitError};
+use crate::git::{GitError, analyze_repository};
 use crate::models::RepoAnalysis;
 use octocrab::Octocrab;
 use std::process::Command;
